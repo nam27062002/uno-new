@@ -5,9 +5,9 @@ namespace _Scripts.Cards
 {
     public class Card : MonoBehaviour
     {
-        private ColorsCard color;
-        private ValuesCard value;
-        private GameObject prefab;
+        private readonly ColorsCard color;
+        private readonly ValuesCard value;
+        private readonly GameObject prefab;
 
         public Card(CardSo cardSo)
         {

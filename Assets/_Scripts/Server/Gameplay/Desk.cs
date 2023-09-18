@@ -2,29 +2,43 @@ using System;
 using System.Collections.Generic;
 using _Scripts.Cards;
 using _Scripts.ScriptableObject;
+using _Scripts.UI;
+using _Scripts.Utils;
 using Photon.Pun;
 using UnityEngine;
 using Random = UnityEngine.Random;
 namespace _Scripts.Server.Gameplay
 {
-    public class Desk : MonoBehaviour
+    public class Desk : Singleton<Desk>
     {
         [SerializeField] private CardListSo cardListSo;
         private readonly int normalCardAmount = 2;
-        private readonly int specialCardAmount = 1;
+        private readonly int specialCardAmount = 1 ;
         private List<Card> cards;
-        private void Awake()
+        private Dictionary<string, CardSo> cardListSoDictionary;
+        public GameObject a;
+        protected override void Awake()
         {
+            base.Awake();
             cards = new List<Card>();
+            
         }
         
         private void Start()
         {
-            ServerManager.Instance.OnServerSetCard += InstanceOnOnServerSetCard;
-            if (!ServerManager.Instance.IsMasterClient) return;
-            Initialize();
-            ShuffleCard();
-            SetCardForAllClient();
+            if (!ServerManager.Instance.IsMasterClient)
+            {
+                cardListSoDictionary = new Dictionary<string, CardSo>();
+                SetCardListSoDictionary();
+            }
+            else
+            {
+                Initialize();
+                ShuffleCard();
+                ShowAllCard();
+                CreateCard();
+            }
+            
         }
         
         private void Initialize()
@@ -73,22 +87,56 @@ namespace _Scripts.Server.Gameplay
             }
         }
 
-        private void ClientSignCard(ColorsCard colorsCard,ValuesCard valuesCard)
-        {
-            Debug.Log($"Color: {colorsCard} Value: {valuesCard}");
-        }
-        
-        private void SetCardForAllClient()
+        private void ShowAllCard()
         {
             foreach (Card card in cards)
             {
-                ServerManager.Instance.SendData(IdData.SetCardForAllClient, RpcTarget.All,card.Color,card.Value);
+                Debug.Log(card.ToString());
             }
         }
-        
-        private void InstanceOnOnServerSetCard(object sender, ServerManager.OnServerSetCardEventArgs e)
+
+        private void ShowAllCardDictionary()
         {
-            ClientSignCard(e.ColorsCard,e.ValuesCard);
+            foreach (string key in cardListSoDictionary.Keys)
+            {
+                Debug.Log($"Key: {key} Value: {cardListSoDictionary[key]}");
+            }
+        }
+
+        public void SetCardsForAllClient()
+        {
+            foreach (Card card in cards)
+            {
+                ServerManager.Instance.SendData(IdData.SetCardsForAllClient,RpcTarget.All,card.Color.ToString(),card.Value.ToString());
+            }
+        }
+
+        private string CreateKeyCardListSoDict(string color, string value)
+        {
+            return color + "-" + value;
+        }
+        private void SetCardListSoDictionary()
+        {
+            foreach (CardSo cardSo in cardListSo.cardSos)
+            {
+                cardListSoDictionary[CreateKeyCardListSoDict(cardSo.color.ToString(),cardSo.value.ToString())] = cardSo;
+            }
+        }
+
+        private CardSo GetCardSoByColorValue(string color, string value)
+        {
+            return cardListSoDictionary[CreateKeyCardListSoDict(color,value)];
+        }
+        public void SetCards(string color,string value)
+        {
+            cards.Add(new Card(GetCardSoByColorValue(color,value)));
+            if (cards.Count == 104) CreateCard();
+        }
+        
+        public void CreateCard()
+        {
+            StartCoroutine(CreateCards.Instance.SpwanCardHandle(cards));
+            
         }
     }
 }

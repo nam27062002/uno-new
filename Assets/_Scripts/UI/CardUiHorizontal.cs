@@ -1,54 +1,52 @@
 using System;
 using System.Collections.Generic;
+using _Scripts.BEAN;
+using _Scripts.Cards;
+using _Scripts.Utils;
 using UnityEngine;
 
 namespace _Scripts.UI
 {
-    public class NewBehaviourScript : MonoBehaviour
+    public class CardUiHorizontal : Singleton<CardUiHorizontal>
     {
-        [SerializeField] private List<GameObject> cards;
-
-        
-        [SerializeField] private float depthCardUi = 2f;
+        private PlayerUno player;
+        public PlayerUno Player => player;
         [SerializeField] private float maxWidth = 1000f;
-        [SerializeField] private float heightLocal = 300f;
-        
-        
-        private const float RatioSizeCard = 2 / 3f;
-        private const float RatioSizeUiPrefab = 14000f / 300f;
-        private float heightCardUi;
-        private float widthCardUi;
-        private float widthLocal;
-        private void Awake()
+        protected override void Awake()
         {
-            heightCardUi = heightLocal * RatioSizeUiPrefab;
-            widthCardUi = heightCardUi * RatioSizeCard;
-            widthLocal = heightLocal * RatioSizeCard;
+            base.Awake();
+            player = new PlayerUno();
         }
 
-        private void Start()
+        public void AddCard(Card card,GameObject cardObject)
         {
-            SpwanCardHandle();
+            player.AddCard(card);
+            cardObject.transform.SetParent(transform);
+            // Instantiate(card.Prefab,card.Prefab.transform.position,card.Prefab.transform.rotation,transform);
+            // float marginHozirontal = (maxWidth - CreateCards.Instance.WitdhLocal * player.CardsAmount) / 2;
+            // if (marginHozirontal >= 0f)
+            // {
+            //    
+            // }
         }
-
-        private void SpwanCardHandle()
-        {
-            float marginHozirontal = (maxWidth - widthLocal * cards.Count) / 2;
-            float dentaDepth = 1f;
-            for (int i = 0; i < cards.Count; i++)
-            {
-                GameObject cardObject = Instantiate(cards[i],transform);
-                if (marginHozirontal >= 0f)
-                {
-                    cardObject.transform.localPosition = new Vector3(-maxWidth/2 + marginHozirontal + widthLocal * i + widthLocal/2,0f,0f);
-                }
-                else
-                {
-                    cardObject.transform.localPosition = new Vector3(-maxWidth/2 + (widthLocal + marginHozirontal * 2/cards.Count)*i+ widthLocal/2,0f,0f);
-                }
-                cardObject.transform.localRotation = Quaternion.Euler(0f,0f,180f);
-                cardObject.transform.localScale = new Vector3(widthCardUi, heightCardUi, depthCardUi + dentaDepth * i);
-            }
-        }
+        // private void SpwanCardHandle()
+        // {
+        //     
+        //     float dentaDepth = 1f;
+        //     for (int i = 0; i < cards.Count; i++)
+        //     {
+        //         GameObject cardObject = Instantiate(cards[i],transform);
+        //         if (marginHozirontal >= 0f)
+        //         {
+        //             cardObject.transform.localPosition = new Vector3(-maxWidth/2 + marginHozirontal + widthLocal * i + widthLocal/2,0f,0f);
+        //         }
+        //         else
+        //         {
+        //             cardObject.transform.localPosition = new Vector3(-maxWidth/2 + (widthLocal + marginHozirontal * 2/cards.Count)*i+ widthLocal/2,0f,0f);
+        //         }
+        //         cardObject.transform.localRotation = Quaternion.Euler(0f,0f,180f);
+        //         cardObject.transform.localScale = new Vector3(widthCardUi, heightCardUi, depthCardUi + dentaDepth * i);
+        //     }
+        // }
     }
 }

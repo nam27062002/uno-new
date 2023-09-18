@@ -55,6 +55,15 @@ MonoBehaviour:
   - OnPlayerJoinedRoom
   - AddPlayerData
   - SetPlayersAlready
+  - StartGame
+  - SendMessageInRoom
+  - ShowCountDownRoom
+  - SetCardsForAllClient
+  - PlayerLoadedGame
+  - CreateCard
+  - FinishedLoadCard
+  - SetCardAmount
+  - CreateCardSuccessfully
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

@@ -3,6 +3,7 @@ using _Scripts.Server.Gameplay;
 using _Scripts.UI;
 using _Scripts.Utils;
 using Photon.Pun;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,17 +14,17 @@ namespace _Scripts.Server.Connect
         [SerializeField] private GameObject playerPrefab;
         [SerializeField] private Button quickButton;
         [SerializeField] private Button readyButton;
-        private List<UiPlayerSingleManager> uiPlayerSingleManagers;
-        
+        [SerializeField] private TextMeshProUGUI readyTextButton;
+        [SerializeField] private TextMeshProUGUI errorText;
         protected override void Awake()
         {
-            uiPlayerSingleManagers = new List<UiPlayerSingleManager>();
+            readyTextButton.text = ServerManager.Instance.IsMasterClient ? "START" : "READY";
         }
         private void Start()
         {   
-            playerPrefab.SetActive(false);
             DestroyAllChild();
-            ServerManager.Instance.SendData(IdData.OnPlayerJoinedRoom,RpcTarget.MasterClient,PhotonNetwork.LocalPlayer,false);
+            SetErrorText("");
+            ServerManager.Instance.SendData(IdData.OnPlayerJoinedRoom,RpcTarget.MasterClient,PhotonNetwork.LocalPlayer,ServerManager.Instance.IsMasterClient);
             
             quickButton.onClick.AddListener(() =>
             {
@@ -31,7 +32,8 @@ namespace _Scripts.Server.Connect
             });
             readyButton.onClick.AddListener(() =>
             {
-                ServerManager.Instance.SendData(IdData.PlayerAlready,RpcTarget.All,PhotonNetwork.NickName);
+                if (!ServerManager.Instance.IsMasterClient) ServerManager.Instance.SendData(IdData.PlayerAlready,RpcTarget.All,PhotonNetwork.NickName);
+                else ServerManager.Instance.SendData(IdData.StartGame,RpcTarget.MasterClient);
             });
         }
 
@@ -43,7 +45,6 @@ namespace _Scripts.Server.Connect
             {
                 GameObject player = (index == 0) ? playerPrefab : Instantiate(playerPrefab, transform);
                 UiPlayerSingleManager playerSingleManager = player.GetComponent<UiPlayerSingleManager>();
-                uiPlayerSingleManagers.Add(playerSingleManager);
                 playerSingleManager.SetNickName(nickname,nickname == PhotonNetwork.NickName);
                 playerSingleManager.SetActiveReadyPrefab(playerAlready[nickname]);
                 player.SetActive(true);
@@ -61,7 +62,11 @@ namespace _Scripts.Server.Connect
                     Destroy(child.gameObject);
                 }
             }
-            uiPlayerSingleManagers.Clear();
+        }
+
+        public void SetErrorText(string message)
+        {
+            errorText.text = message;
         }
     }
 }

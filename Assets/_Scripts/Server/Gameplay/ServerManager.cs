@@ -1,10 +1,10 @@
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using _Scripts.Cards;
+using _Scripts.BEAN;
 using _Scripts.LoadScene;
 using _Scripts.Server.Connect;
+using _Scripts.UI;
 using _Scripts.Utils;
 using Photon.Pun;
 using Photon.Realtime;
@@ -15,25 +15,18 @@ namespace _Scripts.Server.Gameplay
     public enum IdData
     {
         PlayerAlready, // player already
-        SetCardForAllClient, 
         OnPlayerJoinedRoom,  // player just joined room
         SetPlayersAlready, // set only a player 
-        AddPlayerData,// set player for all players in the room
+        StartGame,
+        SendMessageInRoom, 
+        ShowCountDownRoom,
+        SetCardsForAllClient,
+        PlayerLoadedGame,
+        CreateCardSuccessfully,
     }
     public class ServerManager : SingletonPun<ServerManager>
     {
-
-    #region EVENT
-
-    public event EventHandler<OnServerSetCardEventArgs> OnServerSetCard;
-    public class OnServerSetCardEventArgs : EventArgs
-    {
-        public ColorsCard ColorsCard;
-        public ValuesCard ValuesCard;
-    }
-    #endregion
-
-
+        
     private PhotonView _photonView;
     
     private bool isMasterClient;
@@ -41,15 +34,16 @@ namespace _Scripts.Server.Gameplay
     public bool IsMasterClient => isMasterClient;
     // DATA LOBBY
     private Dictionary<string, bool> playerAlready;
-
+    private List<MessageData> messageDatas;
     protected override void Awake()
     {
         base.Awake();
         playerAlready = new Dictionary<string, bool>();
         isMasterClient = PhotonNetwork.IsMasterClient;
         _photonView = GetComponent<PhotonView>();
+        messageDatas = new List<MessageData>();
     }
-
+    
     #region SEND DATA
 
         public void SendData(IdData data, Player playerTarget, object parameter)
@@ -77,22 +71,7 @@ namespace _Scripts.Server.Gameplay
 
     #region RECEIVE DATA
 
-    [PunRPC]
-    private void SetCardForAllClient(params object[] parameters)
-    {
-        if (parameters == null || parameters.Length != 2)
-        {
-            Debug.LogError("Invalid parameters for SetCardForAllPlayer");
-            return;
-        }
-        ColorsCard colorsCard = parameters[0] is ColorsCard ? (ColorsCard)parameters[0] : ColorsCard.BLACK;
-        ValuesCard valueCard = parameters[1] is ValuesCard ? (ValuesCard)parameters[1] : ValuesCard.NUM0;
-        OnServerSetCard?.Invoke(this,new OnServerSetCardEventArgs()
-        {
-            ColorsCard = colorsCard,
-            ValuesCard = valueCard,
-        });
-    }
+
     
     [PunRPC] // handle by master client
     private void OnPlayerJoinedRoom(Player player,bool active)
@@ -109,6 +88,7 @@ namespace _Scripts.Server.Gameplay
             AddPlayerData(player.NickName,active);
             SendData(IdData.SetPlayersAlready,RpcTarget.All,playerAlready.Keys.ToArray(),playerAlready.Values.ToArray());
         }
+        SetAllMessages(player);
     }
 
     [PunRPC]
@@ -131,13 +111,17 @@ namespace _Scripts.Server.Gameplay
     [PunRPC]
     private void PlayerAlready(string nickname)
     {
-        if (playerAlready.ContainsKey(nickname))
+        if (RoomManager.Instance.IsNormalState)
         {
-            playerAlready[nickname] = !playerAlready[nickname];
-            LobbyManager.Instance.UploadLobby(playerAlready);
+            if (playerAlready.ContainsKey(nickname))
+            {
+                playerAlready[nickname] = !playerAlready[nickname];
+                LobbyManager.Instance.UploadLobby(playerAlready);
+            }
         }
     }
-    
+
+
     private void AddPlayerData(string nickname,bool active)
     {
         if (playerAlready.ContainsKey(nickname))
@@ -149,6 +133,64 @@ namespace _Scripts.Server.Gameplay
             playerAlready[nickname] = active;
             Debug.Log($"Added successfully nickname: <color=green>{nickname}</color> active: <color=green>{active}</color>");
         }
+    }
+
+    [PunRPC] // Master client
+    private void StartGame()
+    {
+        if (!isMasterClient || !RoomManager.Instance.IsNormalState) return;
+        if (playerAlready.Count <= 0)
+        {
+            LobbyManager.Instance.SetErrorText("A minimum of 2 players is required to start the game");
+        }
+        
+        else if (playerAlready.ContainsValue(false))
+        {
+            LobbyManager.Instance.SetErrorText("There are players who are not ready yet");
+        }
+        else
+        {
+            SendData(IdData.ShowCountDownRoom,RpcTarget.All);
+        }
+    }
+    
+    [PunRPC] // ALL
+    private void ShowCountDownRoom()
+    {
+        RoomManager.Instance.ChangeStateRoom();
+    }
+    
+    [PunRPC] // ALL 
+    private void SendMessageInRoom(Player player, string message)
+    {
+        if (isMasterClient)
+        {
+            messageDatas.Add(new MessageData(player,message,DateTime.Now));
+        }
+        ChatManager.Instance.ShowMessage(player.NickName,message,PhotonNetwork.LocalPlayer.Equals(player));
+    }
+    
+    [PunRPC] // ALL
+    private void SetCardsForAllClient(string color,string value)
+    {
+        if(!isMasterClient) Desk.Instance.SetCards(color,value);
+    }
+
+    [PunRPC] // Master client
+    private void PlayerLoadedGame()
+    {
+        GameManager.Instance.IncreasePlayerLoadedGame(playerAlready.Count);
+    }
+    [PunRPC]
+    private void CreateCardSuccessfully()
+    {
+        GameManager.Instance.IncreasePlayerCreateCard(playerAlready.Count);
+    }
+
+    [PunRPC] // ALL
+    private void CreateCard()
+    {
+        Desk.Instance.CreateCard();
     }
     #endregion
     
@@ -164,7 +206,7 @@ namespace _Scripts.Server.Gameplay
             
     public void QuickRoom()
     {
-        PhotonNetwork.LeaveRoom();
+        if (RoomManager.Instance.IsNormalState) PhotonNetwork.LeaveRoom();
     }
             
     public override void OnLeftRoom()
@@ -182,6 +224,15 @@ namespace _Scripts.Server.Gameplay
         foreach (string nickname in playerAlready.Keys)
         {
             Debug.Log($"Nickname <color=green>{nickname}</color> Status: <color=green>{playerAlready[nickname]}</color>");
+        }
+    }
+
+    private void SetAllMessages(Player player)
+    {
+        Debug.Log($"NT - {messageDatas.Count}");
+        foreach (MessageData messageData in messageDatas)
+        {
+            SendData(IdData.SendMessageInRoom,player,messageData.Player,messageData.Message);
         }
     }
     
