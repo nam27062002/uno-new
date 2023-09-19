@@ -1461,7 +1461,7 @@ MonoBehaviour:
   serverManagerObject: {fileID: 2587109313904894342}
   countdownObject: {fileID: 1590155598}
   countdownText: {fileID: 1270149911}
-  timeCountdown: 3
+  timeCountdown: 0
 --- !u!4 &525012439
 Transform:
   m_ObjectHideFlags: 0

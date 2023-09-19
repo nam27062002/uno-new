@@ -16,7 +16,6 @@ namespace _Scripts.Server.Gameplay
         private readonly int specialCardAmount = 1 ;
         private List<Card> cards;
         private Dictionary<string, CardSo> cardListSoDictionary;
-        public GameObject a;
         protected override void Awake()
         {
             base.Awake();
@@ -35,7 +34,6 @@ namespace _Scripts.Server.Gameplay
             {
                 Initialize();
                 ShuffleCard();
-                ShowAllCard();
                 CreateCard();
             }
             
@@ -135,8 +133,7 @@ namespace _Scripts.Server.Gameplay
         
         public void CreateCard()
         {
-            StartCoroutine(CreateCards.Instance.SpwanCardHandle(cards));
-            
+            StartCoroutine(CardUiManager.Instance.SpwanCardHandle(cards));
         }
     }
 }

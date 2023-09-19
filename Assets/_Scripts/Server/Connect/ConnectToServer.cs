@@ -1,6 +1,7 @@
 ﻿using _Scripts.LoadScene;
 using Photon.Pun;
 using Photon.Realtime;
+using UnityEngine;
 
 namespace _Scripts.Server.Connect
 {

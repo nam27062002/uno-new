@@ -64,6 +64,9 @@ MonoBehaviour:
   - FinishedLoadCard
   - SetCardAmount
   - CreateCardSuccessfully
+  - SetPlayerOrder
+  - FinishSetPlayerOrder
+  - DiscardToPlayer
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

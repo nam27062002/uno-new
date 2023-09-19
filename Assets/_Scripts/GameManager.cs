@@ -7,42 +7,42 @@ namespace _Scripts
 {
     public class GameManager : Singleton<GameManager>
     {
-        private int playerLoadedGame = 0;
-        private int playerCreatedCard = 0;
-        private enum State
+        private int playerFinished = 0;
+        public const int CardAmountDefault = 8;
+        public enum StateGame
         {
             WaitingForLoading,
             WaitingLoadCard,
-            Play,
+            Discard,
         }
         
-        private State state;
+        private StateGame state;
         protected override void Awake()
         {
             base.Awake();
-            state = State.WaitingForLoading;
+            state = StateGame.WaitingForLoading;
+            ServerManager.Instance.SetPlayerOrder();
             ServerManager.Instance.SendData(IdData.PlayerLoadedGame,RpcTarget.MasterClient);
         }
         
-        public void IncreasePlayerLoadedGame(int playerAmount)
+        public void OnFinishLoadGame(int playerAmount,StateGame stateGame)
         {
-            playerLoadedGame++;
-            if (playerLoadedGame == playerAmount)
+            playerFinished++;
+            if (playerFinished == playerAmount)
             {
-                state = State.WaitingLoadCard;
-                Desk.Instance.SetCardsForAllClient();
-            }
-        }
-        
-        public void IncreasePlayerCreateCard(int playerAmount)
-        {
-            playerCreatedCard++;
-            if (playerCreatedCard == playerAmount)
-            {
-                state = State.WaitingLoadCard;
-            }
-        }
+                playerFinished = 0;
+                if (stateGame == StateGame.WaitingForLoading)
+                {
+                    state = StateGame.WaitingLoadCard;
+                    Desk.Instance.SetCardsForAllClient();
+                }
 
-        
+                if (stateGame == StateGame.WaitingLoadCard)
+                {
+                    state = StateGame.Discard;
+                    StartCoroutine(ServerManager.Instance.StartDistributeCard());
+                }
+            }
+        }
     }
 }

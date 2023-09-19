@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using _Scripts.BEAN;
@@ -23,24 +24,33 @@ namespace _Scripts.Server.Gameplay
         SetCardsForAllClient,
         PlayerLoadedGame,
         CreateCardSuccessfully,
+        DiscardToPlayer,
     }
     public class ServerManager : SingletonPun<ServerManager>
     {
         
-    private PhotonView _photonView;
+    private new PhotonView photonView;
     
     private bool isMasterClient;
 
     public bool IsMasterClient => isMasterClient;
+    
     // DATA LOBBY
     private Dictionary<string, bool> playerAlready;
     private List<MessageData> messageDatas;
+    private Dictionary<string, int> playerOrder;
+    private Dictionary<int, string> playerOderReverse;
+    public Dictionary<string, int> PlayerOrder => playerOrder;
+    
+    private int currentIndex = 0;
     protected override void Awake()
     {
         base.Awake();
+        playerOrder = new Dictionary<string, int>();
+        playerOderReverse = new Dictionary<int, string>();
         playerAlready = new Dictionary<string, bool>();
         isMasterClient = PhotonNetwork.IsMasterClient;
-        _photonView = GetComponent<PhotonView>();
+        photonView = GetComponent<PhotonView>();
         messageDatas = new List<MessageData>();
     }
     
@@ -48,23 +58,23 @@ namespace _Scripts.Server.Gameplay
 
         public void SendData(IdData data, Player playerTarget, object parameter)
         {
-            _photonView.RPC(data.ToString(), playerTarget, parameter);
+            photonView.RPC(data.ToString(), playerTarget, parameter);
         }
         public void SendData(IdData data, Player playerTarget, params object[] parameters)
         {
-            _photonView.RPC(data.ToString(), playerTarget, parameters);
+            photonView.RPC(data.ToString(), playerTarget, parameters);
         }   
         public void SendData(IdData data, RpcTarget rpcTarget)
         {
-            _photonView.RPC(data.ToString(), rpcTarget);
+            photonView.RPC(data.ToString(), rpcTarget);
         }
         public void SendData(IdData data, RpcTarget rpcTarget, object parameter)
         {
-            _photonView.RPC(data.ToString(), rpcTarget, parameter);
+            photonView.RPC(data.ToString(), rpcTarget, parameter);
         }
         public void SendData(IdData data, RpcTarget rpcTarget, params object[] parameters)
         {
-            _photonView.RPC(data.ToString(), rpcTarget, parameters);
+            photonView.RPC(data.ToString(), rpcTarget, parameters);
         }
 
     #endregion
@@ -120,21 +130,7 @@ namespace _Scripts.Server.Gameplay
             }
         }
     }
-
-
-    private void AddPlayerData(string nickname,bool active)
-    {
-        if (playerAlready.ContainsKey(nickname))
-        {
-            Debug.LogError($"Nickname: <color=green>{nickname}</color> has been used");
-        }
-        else
-        {
-            playerAlready[nickname] = active;
-            Debug.Log($"Added successfully nickname: <color=green>{nickname}</color> active: <color=green>{active}</color>");
-        }
-    }
-
+    
     [PunRPC] // Master client
     private void StartGame()
     {
@@ -179,18 +175,27 @@ namespace _Scripts.Server.Gameplay
     [PunRPC] // Master client
     private void PlayerLoadedGame()
     {
-        GameManager.Instance.IncreasePlayerLoadedGame(playerAlready.Count);
+        GameManager.Instance.OnFinishLoadGame(playerAlready.Count,GameManager.StateGame.WaitingForLoading);
     }
+    
     [PunRPC]
     private void CreateCardSuccessfully()
     {
-        GameManager.Instance.IncreasePlayerCreateCard(playerAlready.Count);
+        GameManager.Instance.OnFinishLoadGame(playerAlready.Count,GameManager.StateGame.WaitingLoadCard);
     }
 
     [PunRPC] // ALL
     private void CreateCard()
     {
         Desk.Instance.CreateCard();
+    }
+    
+    
+    
+    [PunRPC] // ALL
+    private void DiscardToPlayer(string nickname)
+    {
+        CardUiManager.Instance.DisCard(nickname);
     }
     #endregion
     
@@ -218,15 +223,7 @@ namespace _Scripts.Server.Gameplay
     
     #region REUSE
 
-    private void ShowPlayerAlready()
-    {
-        Debug.Log($"Length of PlayerAlready: <color=green>{playerAlready.Count}</color>");
-        foreach (string nickname in playerAlready.Keys)
-        {
-            Debug.Log($"Nickname <color=green>{nickname}</color> Status: <color=green>{playerAlready[nickname]}</color>");
-        }
-    }
-
+    
     private void SetAllMessages(Player player)
     {
         Debug.Log($"NT - {messageDatas.Count}");
@@ -235,7 +232,62 @@ namespace _Scripts.Server.Gameplay
             SendData(IdData.SendMessageInRoom,player,messageData.Player,messageData.Message);
         }
     }
+
+    public IEnumerator StartDistributeCard()
+    {
+        for (int i = 0; i < playerOrder.Count * GameManager.CardAmountDefault; i++)
+        {
+            Debug.Log(playerOderReverse[currentIndex]);
+            SendData(IdData.DiscardToPlayer,RpcTarget.All,playerOderReverse[currentIndex]);
+            currentIndex = (currentIndex + 1) % playerOrder.Count;
+            yield return new WaitForSeconds(CardUiManager.Instance.TimeDiscard);
+        }
+    }
     
+    private void AddPlayerData(string nickname,bool active)
+    {
+        if (playerAlready.ContainsKey(nickname))
+        {
+            Debug.LogError($"Nickname: <color=green>{nickname}</color> has been used");
+        }
+        else
+        {
+            playerAlready[nickname] = active;
+            Debug.Log($"Added successfully nickname: <color=green>{nickname}</color> active: <color=green>{active}</color>");
+        }
+    }
+    
+    public void SetPlayerOrder()
+    { 
+        string myNickname = PhotonNetwork.NickName;
+        int playerCount = PhotonNetwork.PlayerList.Length;
+        int myIndex = -1;
+        for (int i = 0; i < playerCount; i++)
+        {
+            if (PhotonNetwork.PlayerList[i].NickName == myNickname)
+            {
+                myIndex = i;
+                break;
+            }
+        }
+
+        if (myIndex == -1)
+        {
+            Debug.LogError("don't find nickname on listPlayer");
+            return;
+        }
+    
+        for (int i = 0; i < playerCount; i++)
+        {
+            int relativeIndex = (i - myIndex + playerCount) % playerCount;
+            playerOrder[PhotonNetwork.PlayerList[i].NickName] = relativeIndex;
+            playerOderReverse[relativeIndex] = PhotonNetwork.PlayerList[i].NickName;
+        }
+        foreach (string nickname in playerOrder.Keys)
+        {
+            Debug.Log($"Nickname: {nickname}  Index: {playerOrder[nickname]}");
+        }
+    }
     #endregion
     }
 }

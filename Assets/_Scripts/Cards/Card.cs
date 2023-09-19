@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace _Scripts.Cards
 {
-    public class Card : MonoBehaviour
+    public class Card
     {
         private readonly ColorsCard color;
         private readonly ValuesCard value;
