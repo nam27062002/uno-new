@@ -25,6 +25,7 @@ namespace _Scripts.Server.Gameplay
         PlayerLoadedGame,
         CreateCardSuccessfully,
         DiscardToPlayer,
+        FinishedDistributeCard,
     }
     public class ServerManager : SingletonPun<ServerManager>
     {
@@ -76,7 +77,6 @@ namespace _Scripts.Server.Gameplay
         {
             photonView.RPC(data.ToString(), rpcTarget, parameters);
         }
-
     #endregion
 
     #region RECEIVE DATA
@@ -193,9 +193,21 @@ namespace _Scripts.Server.Gameplay
     
     
     [PunRPC] // ALL
-    private void DiscardToPlayer(string nickname)
+    private IEnumerator DiscardToPlayer(string[] nicknames)
     {
-        CardUiManager.Instance.DisCard(nickname);
+        foreach (string nickname in nicknames)
+        {
+            CardUiManager.Instance.DisCard(nickname);
+            yield return new WaitForSeconds(CardUiManager.Instance.TimeDiscard);
+        }
+        yield return new WaitForSeconds(CardUiManager.Instance.TimeDiscard);
+        SendData(IdData.FinishedDistributeCard,RpcTarget.MasterClient);
+    }
+
+    [PunRPC] // Master client
+    private void FinishedDistributeCard()
+    {
+        GameManager.Instance.OnFinishLoadGame(playerAlready.Count,GameManager.StateGame.WaitingDistributeCard);
     }
     #endregion
     
@@ -233,15 +245,16 @@ namespace _Scripts.Server.Gameplay
         }
     }
 
-    public IEnumerator StartDistributeCard()
+    public void StartDistributeCard()
     {
+        List<string> nicknames = new List<string>();
         for (int i = 0; i < playerOrder.Count * GameManager.CardAmountDefault; i++)
         {
-            Debug.Log(playerOderReverse[currentIndex]);
-            SendData(IdData.DiscardToPlayer,RpcTarget.All,playerOderReverse[currentIndex]);
+            nicknames.Add(playerOderReverse[currentIndex]);
             currentIndex = (currentIndex + 1) % playerOrder.Count;
-            yield return new WaitForSeconds(CardUiManager.Instance.TimeDiscard);
         }
+        SendData(IdData.DiscardToPlayer,RpcTarget.All,nicknames.ToArray());
+        currentIndex = 0;
     }
     
     private void AddPlayerData(string nickname,bool active)

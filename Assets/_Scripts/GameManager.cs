@@ -13,14 +13,12 @@ namespace _Scripts
         {
             WaitingForLoading,
             WaitingLoadCard,
-            Discard,
+            WaitingDistributeCard,
         }
         
-        private StateGame state;
         protected override void Awake()
         {
             base.Awake();
-            state = StateGame.WaitingForLoading;
             ServerManager.Instance.SetPlayerOrder();
             ServerManager.Instance.SendData(IdData.PlayerLoadedGame,RpcTarget.MasterClient);
         }
@@ -33,14 +31,17 @@ namespace _Scripts
                 playerFinished = 0;
                 if (stateGame == StateGame.WaitingForLoading)
                 {
-                    state = StateGame.WaitingLoadCard;
                     Desk.Instance.SetCardsForAllClient();
                 }
 
                 if (stateGame == StateGame.WaitingLoadCard)
                 {
-                    state = StateGame.Discard;
-                    StartCoroutine(ServerManager.Instance.StartDistributeCard());
+                    ServerManager.Instance.StartDistributeCard();
+                }
+
+                if (stateGame == StateGame.WaitingDistributeCard)
+                {
+                    Debug.Log("OKE");
                 }
             }
         }
