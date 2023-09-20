@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using _Scripts.BEAN;
+using _Scripts.Cards;
 using _Scripts.LoadScene;
 using _Scripts.Server.Connect;
 using _Scripts.UI;
@@ -26,6 +27,9 @@ namespace _Scripts.Server.Gameplay
         CreateCardSuccessfully,
         DiscardToPlayer,
         FinishedDistributeCard,
+        OnPlayerCanPlay,
+        OnCardSelected,
+        
     }
     public class ServerManager : SingletonPun<ServerManager>
     {
@@ -44,6 +48,7 @@ namespace _Scripts.Server.Gameplay
     public Dictionary<string, int> PlayerOrder => playerOrder;
     
     private int currentIndex = 0;
+    private Card previousCard = null;
     protected override void Awake()
     {
         base.Awake();
@@ -201,11 +206,25 @@ namespace _Scripts.Server.Gameplay
         yield return new WaitForSeconds(CardUiManager.Instance.TimeDiscard);
         SendData(IdData.FinishedDistributeCard,RpcTarget.MasterClient);
     }
-
+    
+    
+    
     [PunRPC] // Master client
     private void FinishedDistributeCard()
     {
         GameManager.Instance.OnFinishLoadGame(playerAlready.Count,GameManager.StateGame.WaitingDistributeCard);
+    }
+
+    [PunRPC] // Other player
+    private void OnPlayerCanPlay()
+    {
+        CardUiManager.Instance.SetCardCanPlay(previousCard);
+    }
+
+    [PunRPC] // All
+    private void OnCardSelected(int index,string nickname)
+    {
+        CardUiManager.Instance.SetChildTableObject(index,nickname);
     }
     #endregion
     
@@ -233,7 +252,29 @@ namespace _Scripts.Server.Gameplay
     
     #region REUSE
 
-    
+    public void SetPlayerCanPlay()
+    {
+        if (!isMasterClient) return;
+        Player player = GetPlayerByIndex(currentIndex);
+        if (player != null)
+        {
+            SendData(IdData.OnPlayerCanPlay,player);
+        }
+    }
+
+    private Player GetPlayerByIndex(int index)
+    {
+        string nickname = playerOderReverse[index];
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            if (player.NickName == nickname)
+            {
+                return player;
+            }
+        }
+
+        return null;
+    }
     private void SetAllMessages(Player player)
     {
         Debug.Log($"NT - {messageDatas.Count}");

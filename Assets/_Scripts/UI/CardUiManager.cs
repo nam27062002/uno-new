@@ -19,6 +19,7 @@ namespace _Scripts.UI
         [SerializeField] private List<GameObject> playerUi;
         [SerializeField] private GameObject spawnCardObject;
         [SerializeField] private float timeDiscard = 0.2f;
+        [SerializeField] private GameObject tableObject;
         public float TimeDiscard => timeDiscard;
         private float widthLocal;
         private float heightCardUi;
@@ -30,6 +31,7 @@ namespace _Scripts.UI
         private List<PlayerUno> players;
         private List<GameObject> gameObjectCard;
         private List<Card> cards;
+        private int countDiscard = 0;
         protected override void Awake()
         {
             base.Awake();
@@ -131,6 +133,7 @@ namespace _Scripts.UI
             {
                 Card card = cards[cards.Count - 1];
                 GameObject cardObject = gameObjectCard[gameObjectCard.Count - 1];
+                
                 AddCard(card,cardObject);
                 cards.Remove(card);
                 gameObjectCard.Remove(cardObject);
@@ -145,6 +148,25 @@ namespace _Scripts.UI
         {
             if (index == 0 || index == 2) return maxWidthHorizontal;
             return maxWidthVertical;
+        }
+
+        public void SetCardCanPlay(Card card)
+        {
+            players[0].SetCardCanPlay(card);
+        }
+
+        public void SetChildTableObject(int index,string nickname)
+        {
+            float dentaTime = 0.5f;
+            float dentaDepth = 0.1f;
+            
+            int localIndex = ServerManager.Instance.PlayerOrder[nickname];
+            GameObject cardObject = players[localIndex].GetCardObjectByIndex(index);
+
+            cardObject.transform.SetParent(tableObject.transform);
+            cardObject.transform.DOLocalMove(new Vector3(0,0,-dentaDepth*countDiscard),dentaTime);
+            cardObject.transform.DOLocalRotate(new Vector3(0,0,Random.Range(-90,90)), dentaTime);
+            countDiscard++;
         }
     }
 }

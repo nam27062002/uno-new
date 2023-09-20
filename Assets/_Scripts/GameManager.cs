@@ -22,7 +22,8 @@ namespace _Scripts
             ServerManager.Instance.SetPlayerOrder();
             ServerManager.Instance.SendData(IdData.PlayerLoadedGame,RpcTarget.MasterClient);
         }
-        
+
+
         public void OnFinishLoadGame(int playerAmount,StateGame stateGame)
         {
             playerFinished++;
@@ -41,7 +42,7 @@ namespace _Scripts
 
                 if (stateGame == StateGame.WaitingDistributeCard)
                 {
-                    
+                    ServerManager.Instance.SetPlayerCanPlay();
                 }
             }
         }
