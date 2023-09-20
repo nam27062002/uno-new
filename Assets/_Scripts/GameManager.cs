@@ -41,7 +41,7 @@ namespace _Scripts
 
                 if (stateGame == StateGame.WaitingDistributeCard)
                 {
-                    Debug.Log("OKE");
+                    
                 }
             }
         }

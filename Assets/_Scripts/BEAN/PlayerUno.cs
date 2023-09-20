@@ -8,7 +8,6 @@ namespace _Scripts.BEAN
     {
         private readonly List<Card> cards;
         private readonly List<GameObject> cardsObject;
-
         public PlayerUno()
         {
             cards = new List<Card>();
@@ -29,8 +28,25 @@ namespace _Scripts.BEAN
             cardsObject.Remove(cardObject);
         }
 
-        public int CardsAmount => cards.Count;
+        public List<GameObject> ListObjectCardValid(Card card)
+        {
+            
+            List<GameObject> gameObjects = new List<GameObject>();
+            int count = 0;
+            foreach (Card c in cards)
+            {
+                if (c.Color == card.Color || c.Value == card.Value || c.Value == ValuesCard.COL ||
+                    c.Value == ValuesCard.PL4 || card == null)
+                {
+                    gameObjects.Add(cardsObject[count]);
+                }
 
+                count++;
+            }
+            return gameObjects; 
+        }
+        public int CardsAmount => cards.Count;
+        
 
     }
 }

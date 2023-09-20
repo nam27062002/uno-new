@@ -190,8 +190,6 @@ namespace _Scripts.Server.Gameplay
         Desk.Instance.CreateCard();
     }
     
-    
-    
     [PunRPC] // ALL
     private IEnumerator DiscardToPlayer(string[] nicknames)
     {
