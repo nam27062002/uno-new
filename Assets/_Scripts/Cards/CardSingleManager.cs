@@ -18,6 +18,7 @@ namespace _Scripts.Cards
         private float dentaYHover = PlayerUno.dentaY + 15;
         private float dentaYClick = PlayerUno.dentaY + 30;
         private int index;
+        
         public Card Card
         {
             set
@@ -71,6 +72,11 @@ namespace _Scripts.Cards
                     SINGLE_MANAGER = this;
                 }
             }
+        }
+
+        public void OnDestroy()
+        {
+            Destroy(this);
         }
     }
 }

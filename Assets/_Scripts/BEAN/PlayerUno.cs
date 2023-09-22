@@ -9,10 +9,12 @@ namespace _Scripts.BEAN
     {
         private readonly List<Card> cards;
         private readonly List<GameObject> cardsObject;
+        private List<CardSingleManager> cardSingleManagers;
         public PlayerUno()
         {
             cards = new List<Card>();
             cardsObject = new List<GameObject>();
+            cardSingleManagers = new List<CardSingleManager>();
         }
 
         public GameObject GetCardObjectByIndex(int index)
@@ -29,16 +31,17 @@ namespace _Scripts.BEAN
             cardsObject.Add(cardObject);
         }
 
-        public void RemoveCard(Card card,GameObject cardObject)
+        public void RemoveCard(int index)
         {
-            cards.Remove(card);
-            cardsObject.Remove(cardObject);
+            cards.RemoveAt(index);
+            cardsObject.RemoveAt(index);
         }
 
         private List<GameObject> ListObjectCardValid(Card card)
         {
             
             List<GameObject> gameObjects = new List<GameObject>();
+            cardSingleManagers.Clear();
             int count = 0;
             foreach (Card c in cards)
             {
@@ -47,6 +50,7 @@ namespace _Scripts.BEAN
                 {
                     GameObject cardObject = cardsObject[count];
                     CardSingleManager cardSingleManager = cardObject.AddComponent<CardSingleManager>();
+                    cardSingleManagers.Add(cardSingleManager);
                     cardObject.AddComponent<BoxCollider>();
                     cardSingleManager.Card = c;
                     cardSingleManager.CardObj = cardObject;
@@ -69,6 +73,15 @@ namespace _Scripts.BEAN
                 target.y += dentaY;
                 obj.transform.DOLocalMoveY(dentaY,dentaTime);
             }
+        }
+
+        public void UnSetCardPCanPlay()
+        {
+            foreach (CardSingleManager obj in cardSingleManagers)
+            {
+               obj.OnDestroy();
+            }
+            cardSingleManagers.Clear();
         }
         
     }

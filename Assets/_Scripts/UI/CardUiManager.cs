@@ -107,14 +107,27 @@ namespace _Scripts.UI
         private IEnumerator WaitForMoveComplete(Tweener tweener)
         {
             yield return tweener.WaitForCompletion();
-            SpwanCardHandle();
+            SpwanCardHandle(0.5f);
         }
-        private void SpwanCardHandle()
+        private void SpwanCardHandle(float dentatime)
         {
             for (int i = 0; i < players[index].CardsAmount; i++)
             {
                 GameObject cardObject = players[index].CardsObject[i];
-                cardObject.transform.localPosition = GetVectorCardTarget(i);
+                // cardObject.transform.localPosition = GetVectorCardTarget(i);
+                cardObject.transform.DOLocalMove( GetVectorCardTarget(i),dentatime);
+                Vector3 scale = cardObject.transform.localScale;
+                scale.z = 10f + i; 
+                cardObject.transform.localScale = scale;
+            }
+        }
+        
+        private void SpwanCardHandle(int index,float dentatime)
+        {
+            for (int i = 0; i < players[index].CardsAmount; i++)
+            {
+                GameObject cardObject = players[index].CardsObject[i];
+                cardObject.transform.DOLocalMove( GetVectorCardTarget(i),dentatime);
                 Vector3 scale = cardObject.transform.localScale;
                 scale.z = 10f + i; 
                 cardObject.transform.localScale = scale;
@@ -162,10 +175,13 @@ namespace _Scripts.UI
             
             int localIndex = ServerManager.Instance.PlayerOrder[nickname];
             GameObject cardObject = players[localIndex].GetCardObjectByIndex(index);
-
+            
             cardObject.transform.SetParent(tableObject.transform);
             cardObject.transform.DOLocalMove(new Vector3(0,0,-dentaDepth*countDiscard),dentaTime);
             cardObject.transform.DOLocalRotate(new Vector3(0,0,Random.Range(-90,90)), dentaTime);
+            players[localIndex].UnSetCardPCanPlay();
+            players[localIndex].RemoveCard(index);
+            SpwanCardHandle(0,dentaTime);
             countDiscard++;
         }
     }
